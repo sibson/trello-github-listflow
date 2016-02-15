@@ -1,0 +1,9 @@
+github3.py==0.9.4
+oauthlib==1.0.3
+-e git+https://github.com/sarumont/py-trello.git@ce00a32e9e443d6b6364c0132cbfcf83abaef724#egg=py_trello-master
+python-dateutil==2.4.2
+requests==2.9.1
+requests-oauthlib==0.6.0
+six==1.10.0
+uritemplate.py==0.3.0
+wsgiref==0.1.2
