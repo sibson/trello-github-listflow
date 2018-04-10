@@ -118,8 +118,7 @@ def convert_list(repo_name, board_name, list_name, labels=None):
         create_milestone_for_card(repo, card, labels=labels)
 
 
-def convert_card(repo_name, card, labels=None):
-    trello, repo = connect(repo_name)
+def convert_card(repo, card, labels=None):
     card.fetch()
     create_milestone_for_card(repo, card, labels=labels)
 
@@ -145,12 +144,26 @@ def cardflow(*args):
     """
         cardflow card user/repo [labels]
     """
-    if len(args) < 3:
+    if len(args) < 5:
         print(cardflow.__doc__)
         sys.exit(1)
 
-    raise NotImplementedError()
+    board_name = args[0]
+    list_name = args[1]
+    card_name = args[2]
+    repo_name = args[3]
+    labels = args[4:]
+
+    trello, repo = connect(repo_name)
+
+    board = get_board(trello, board_name)
+    tlist = get_list(trello, board, list_name)
+    for c in tlist.list_cards():
+        if c.name == card_name:
+            convert_card(repo, c, labels)
+            break
 
 
 if __name__ == '__main__':
-    listflow(*sys.argv[1:])
+#    listflow(*sys.argv[1:])
+    cardflow(*sys.argv[1:])
