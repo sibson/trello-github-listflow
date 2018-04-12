@@ -77,25 +77,36 @@ def create_milestone_for_card(repo, card, labels=None):
         description = '# [{}]({})\n'.format(card.name, card.short_url) + card.description
         milestone = repo.create_milestone(card.name, description=description)
 
+    attachments = [a.name for a in card.get_attachments()]
     for cl in card.fetch_checklists():
         for cli in cl.items:
             name = cli['name']
+
             issue = get_issue(repo, name, milestone=card.name)
-            if issue and 'https://github.com' not in name:
-                print('\t - {} linking to Github'.format(name))
-                cl.rename_checklist_item(name, '{} {}'.format(name, issue.html_url))
+            # issue exists but isn't linked
+            if issue and name not in attachments:
+                print('\t x ', name)
+                card.attach(name, url=issue.html_url)
+                cl.delete_checklist_item(name)
                 continue
 
-            print('\t - ', name)
+            # existing issue should be skipped
+            if issue:
+                print('\t - ', name)
+                continue
+
+            print('\t + ', name)
             try:
-                created_at = card.create_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+                created_at = card.created_date.strftime('%Y-%m-%dT%H:%M:%SZ')
             except IndexError:
                 created_at = None
 
             description = '# [{}]({})'.format(card.name, card.short_url)
-            issue = repo.import_issue(cli['name'], description, created_at, milestone=milestone.number, labels=labels)
+            ii = repo.import_issue(name, description, created_at, milestone=milestone.number, labels=labels)
+            issue = get_issue(repo, name)
+            card.attach(name, url=issue.html_url)
+            cl.delete_checklist_item(name)
 
-            cl.rename_checklist_item(name, '{} {}'.format(name, issue.html_url))
     print('')
     return milestone
 
@@ -125,43 +136,36 @@ def convert_card(repo, card, labels=None):
 
 def listflow(*args):
     """
-        listflow board list user/repo [labels]
+        listflow user/repo board/list [labels]
     """
-    if len(args) < 4:
+    if len(args) < 3:
         print(args)
         print(listflow.__doc__)
         sys.exit(1)
 
-    board_name = args[0]
-    list_name = args[1]
-    repo_name = args[2]
-    labels = args[3:]
+    repo_name = args[0]
+    board_name, list_name = args[1].split('/')
+    labels = args[2:]
 
     convert_list(repo_name, board_name, list_name, labels)
 
 
 def cardflow(*args):
     """
-        cardflow card user/repo [labels]
+        cardflow user/repo card_id [labels]
     """
-    if len(args) < 5:
+    if len(args) < 2:
         print(cardflow.__doc__)
         sys.exit(1)
 
-    board_name = args[0]
-    list_name = args[1]
-    card_name = args[2]
-    repo_name = args[3]
-    labels = args[4:]
+    repo_name = args[0]
+    card_id = args[1]
+    labels = args[2:]
 
     trello, repo = connect(repo_name)
 
-    board = get_board(trello, board_name)
-    tlist = get_list(trello, board, list_name)
-    for c in tlist.list_cards():
-        if c.name == card_name:
-            convert_card(repo, c, labels)
-            break
+    card = trello.get_card(card_id)
+    convert_card(repo, card, labels)
 
 
 if __name__ == '__main__':
