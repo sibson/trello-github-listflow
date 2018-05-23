@@ -41,12 +41,15 @@ if not GITHUB_USER or not GITHUB_PASSWORD:
     sys.exit(1)
 
 
-def get_board(trello, board_name):
+def get_board(trello, board):
     for b in trello.list_boards():
-        if b.name == board_name or b.url.endswith(board_name):
+        if b.id == board:
             return b
 
-    raise BoardNotFound(board_name)
+        if b.name == board or b.url.endswith(board):
+            return b
+
+    raise BoardNotFound(board)
 
 def get_list(trello, board, list_name):
     for l in board.open_lists():
@@ -96,14 +99,7 @@ def create_milestone_for_card(repo, card, labels=None):
                 continue
 
             print('\t + ', name)
-            try:
-                created_at = card.created_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-            except IndexError:
-                created_at = None
-
-            description = '# [{}]({})'.format(card.name, card.short_url)
-            ii = repo.import_issue(name, description, created_at, milestone=milestone.number, labels=labels)
-            issue = get_issue(repo, name)
+            issue = repo.create_issue(name, milestone=milestone.number, labels=labels)
             card.attach(name, url=issue.html_url)
             cl.delete_checklist_item(name)
 
@@ -118,10 +114,10 @@ def connect(repo_name):
     return trello, repo
 
 
-def convert_list(repo_name, board_name, list_name, labels=None):
+def convert_list(repo_name, board, list_name, labels=None):
     trello, repo = connect(repo_name)
 
-    board = get_board(trello, board_name)
+    board = get_board(trello, board)
     tlist = get_list(trello, board, list_name)
 
     for card in tlist.list_cards():
@@ -144,10 +140,10 @@ def listflow(*args):
         sys.exit(1)
 
     repo_name = args[0]
-    board_name, list_name = args[1].split('/')
+    board, list_name = args[1].split('/')
     labels = args[2:]
 
-    convert_list(repo_name, board_name, list_name, labels)
+    convert_list(repo_name, board, list_name, labels)
 
 
 def cardflow(*args):
@@ -169,5 +165,9 @@ def cardflow(*args):
 
 
 if __name__ == '__main__':
-#    listflow(*sys.argv[1:])
-    cardflow(*sys.argv[1:])
+    if sys.argv[1] == 'list':
+        listflow(*sys.argv[2:])
+    elif sys.argv[1] == 'card':
+        cardflow(*sys.argv[2:])
+    else:
+        cardflow(*sys.argv[1:])
