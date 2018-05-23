@@ -46,16 +46,17 @@ def get_board(trello, board):
     for b in trello.list_boards():
         if b.id == board:
             return b
-
-        if b.name == board or b.url.endswith(board):
+        elif b.name == board:
+            return b
+        elif b.url.endswith(board):
+            return b
+        elif board in b.url:
             return b
 
     raise BoardNotFound(board)
 
 def get_list(trello, board, list_name):
     for l in board.open_lists():
-        print(l, l.name, list_name)
-
         if l.name == list_name:
             return l
 
